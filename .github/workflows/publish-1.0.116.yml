@@ -1,0 +1,57 @@
+name: Publish reviewed 1.0.116 prerelease
+on:
+  push:
+    branches: ["release-artifacts/v1.0.116"]
+    paths: ["public/v1.0.116/**"]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: publish-v1.0.116
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'trgiang1008/pingpk-releases'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download and verify reviewed public package
+        env:
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, urllib.request
+          base = "https://raw.githubusercontent.com/trgiang1008/pingpk-releases/" + os.environ["RELEASE_COMMIT"] + "/public/v1.0.116/"
+          pathlib.Path("assets").mkdir()
+          names = ["PingPK-v1.0.116.zip", "SHA256SUMS.txt", "DEFENDER-SCAN.txt", "release-notes.md", "asset-manifest.json"]
+          for name in names:
+              data = urllib.request.urlopen(base + name, timeout=60).read()
+              pathlib.Path("assets", name).write_bytes(data)
+          manifest = json.loads(pathlib.Path("assets/asset-manifest.json").read_text())
+          assert manifest["PingPK-v1.0.116.zip"] == "f90dc4b066ada4fc535874ccea1f5be820d6d7a4e123dcc3a40e0fdbfe783238"
+          for name, expected in manifest.items():
+              assert hashlib.sha256(pathlib.Path("assets", name).read_bytes()).hexdigest() == expected, name
+          PY
+      - name: Create draft, upload, verify downloads, then publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: trgiang1008/pingpk-releases
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.116 >/dev/null 2>&1; then
+            echo "Release already exists; preserving it for review."
+            exit 1
+          fi
+          gh release create v1.0.116 --draft --prerelease --latest=false --target "$RELEASE_COMMIT" --title "v1.0.116 - Ban thu nghiem, chua quet duoc Defender" --notes-file assets/release-notes.md
+          gh release upload v1.0.116 assets/PingPK-v1.0.116.zip assets/SHA256SUMS.txt assets/DEFENDER-SCAN.txt
+          mkdir downloaded
+          gh release download v1.0.116 --dir downloaded
+          python3 - <<'PY'
+          import hashlib, json, pathlib
+          manifest = json.loads(pathlib.Path("assets/asset-manifest.json").read_text())
+          for name in ["PingPK-v1.0.116.zip", "SHA256SUMS.txt", "DEFENDER-SCAN.txt"]:
+              assert hashlib.sha256(pathlib.Path("downloaded", name).read_bytes()).hexdigest() == manifest[name], name
+          print("PASS: all uploaded release assets downloaded and hashes verified.")
+          PY
+          gh release edit v1.0.116 --draft=false --prerelease --latest=false
