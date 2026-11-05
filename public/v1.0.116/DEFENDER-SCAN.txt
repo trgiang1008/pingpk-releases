@@ -1,0 +1,6 @@
+PingPK v1.0.116 — trạng thái quét đúng bộ tệp phát hành
+EXE, thư mục và ZIP: ExitCode 2, công cụ báo HRESULT 0x800106BA, không khởi động được quét.
+Không có kết quả quét thành công hoặc kết quả phát hiện threat của lần này. Không khẳng định đã qua antivirus hoặc kết luận cảnh báo nhầm.
+EXE SHA256: D55D297D77314EDF3F5EC23061E37063C0DD7F43DBBEE9B171825C4E75D301A8
+ZIP SHA256: F90DC4B066ADA4FC535874CCEA1F5BE820D6D7A4E123DCC3A40E0FDBFE783238
+Giữ nguyên binary bản116, không đổi Defender hoặc rebuild theo kết quả scan.
